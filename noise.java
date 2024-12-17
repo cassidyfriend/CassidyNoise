@@ -1,4 +1,4 @@
-package cassidynoise;
+//package cassidynoise;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -22,7 +22,7 @@ public class Noise extends JPanel {
 	int divider[] = {1, 70, 240, 30, 10};
 	static int ix = 0;
 	static int currentseed = 0;
-	static cassidynoise noise = new cassidynoise(675567, 0.1);
+	static cassidynoise noise = new cassidynoise(32, 0.1);
 	static void print(Object o) {
 		System.out.println(o);
 	}
