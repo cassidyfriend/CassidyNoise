@@ -11,10 +11,6 @@ public class cassidynoise {
     	public double[] getrange(double x);
     }
     
-    void print(Object o) {
-    	System.out.println(o);
-    }
-    
     public cassidynoise(long seed, double scale) {
               this.seed = seed;
 			  this.scalex = scale;
@@ -25,11 +21,6 @@ public class cassidynoise {
         x = (x ^ (x >>> 15)) * 0x3335b369;
         return Math.abs(x);
     }
-    
-    double roundtonearest(double base, double amount) {
-    	int start = (int)Math.round(base / amount);
-		return start * amount;
-	}
     
     double smooth(double x, double startheight, double targetheight) {
         double start = 6.0 * Math.pow(x, 5);
@@ -48,14 +39,13 @@ public class cassidynoise {
     }
 	
 	double getRandomNumber(int input) {
+        long targetseed = seed;
+        for(int i = 0; i < Math.abs(middleSquareNumber(input, 3)) % 150; i++) {
+			targetseed = hashSeed(targetseed);
+        }
         final long multiplier = 1664525L;
         final long increment = 1013904223L;
         final long modulus = (1L << 32);
-        long foramount = Math.abs(middleSquareNumber(input, 3));
-        long targetseed = seed;
-        for(int i = 0; i < foramount % 150; i++) {
-			targetseed = hashSeed(targetseed);
-        }
         long randomValue = (multiplier * targetseed + increment) % modulus;
         randomValue ^= (randomValue >>> 16);
         randomValue ^= (randomValue << 5);
@@ -81,7 +71,6 @@ public class cassidynoise {
 	}
 
     public double getNoiseAt(double x, locationdetails base) {
-        double output = 0;
         double scaledx = x*scalex;
         int currentx = (int)Math.floor(scaledx);
         int targetx = (int)Math.ceil(scaledx);
@@ -94,7 +83,6 @@ public class cassidynoise {
 			cachedLocation[1] = targetx;
         	isCacheOcupied = true;
         }
-		output = smooth(scaledx - currentx, cached[0], cached[1]);
-        return output;
+        return smooth(scaledx - currentx, cached[0], cached[1]);
     }
 }
