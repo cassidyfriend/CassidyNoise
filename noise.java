@@ -1,100 +1,105 @@
 package cassidynoise;
 
-public class cassidynoise {
-    long seed;
-    double scalex;
-    double cached[] = {0,0};
-    int cachedLocation[] = {0,0};
-    boolean isCacheOcupied = false;
-    
-    public interface locationdetails{
-    	public double[] getrange(double x);
-    }
-    
-    void print(Object o) {
-    	System.out.println(o);
-    }
-    
-    public cassidynoise(long seed, double scale) {
-              this.seed = seed;
-			  this.scalex = scale;
-    }
-	
-    long hashSeed(long x) {
-        x = (x ^ (x >>> 21)) * 0x45d9f3b;
-        x = (x ^ (x >>> 15)) * 0x3335b369;
-        return Math.abs(x);
-    }
-    
-    double roundtonearest(double base, double amount) {
-    	int start = (int)Math.round(base / amount);
-		return start * amount;
-	}
-    
-    double smooth(double x, double startheight, double targetheight) {
-        double start = 6.0 * Math.pow(x, 5);
-        double middle = 15.0 * Math.pow(x, 4);
-        double end = 10.0 * Math.pow(x, 3);
-        return (start - middle + end) * (targetheight - startheight) + startheight;
-    }
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
-    long middleSquareNumber(long seed, int digits) {
-		seed = hashSeed(seed);
-        if (digits <= 0) throw new IllegalArgumentException("Digits must be positive.");
-        long square = seed * seed;
-        String squareStr = String.format("%0" + (2 * digits) + "d", square);
-        int start = (squareStr.length() - digits) / 2;
-        return Long.parseLong(squareStr.substring(start, start + digits));
-    }
-	
-	double getRandomNumber(int input) {
-        final long multiplier = 1664525L;
-        final long increment = 1013904223L;
-        final long modulus = (1L << 32);
-        long foramount = Math.abs(middleSquareNumber(input, 3));
-        long targetseed = seed;
-        for(int i = 0; i < foramount % 150; i++) {
-			targetseed = hashSeed(targetseed);
-        }
-        long randomValue = (multiplier * targetseed + increment) % modulus;
-        randomValue ^= (randomValue >>> 16);
-        randomValue ^= (randomValue << 5);
-        randomValue = randomValue & 0x7FFFFFFF;
-        return randomValue / (double) 0x7FFFFFFF;
-    }
-	
-	boolean doescachecontain(int x) {
-		if((cachedLocation[0] == x || cachedLocation[1] == x) && isCacheOcupied) {
-			return true;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+// A Simple Java program 
+// to show working of user defined 
+// Generic classes 
+
+// We use < > to specify Parameter type 
+
+@SuppressWarnings("serial")
+public class Noise extends JPanel {
+	static JFrame frame = new JFrame("game");
+	static int frameWidth = 1200, frameHeight = 750;
+	double scales[] = {0.0001, 0.0005, 0.001, 0.01, 0.03};
+	int divider[] = {1, 70, 240, 30, 10};
+	static int ix = 0;
+	static int currentseed = 0;
+	static cassidynoise noise = new cassidynoise(45327, 0.01);
+	static void print(Object o) {
+		System.out.println(o);
+	}
+	public void paint(Graphics g) {
+		 g.setColor(Color.white);
+		 g.fillRect(0, 0, frameWidth, frameHeight);
+		 g.setColor(Color.black);
+		 int i = 0;
+		 for(i = 0; i < frameWidth; i++) {
+			 int current = (int)Math.round(noise.getNoiseAt((i+Keylistener.placement), (double x) -> getminandmax(x)));
+			 //print(current);
+			 g.fillRect(i, current, 3, 3);
+		 }
+		 frameWidth = frame.getWidth();
+		 frameHeight = frame.getHeight();
+		 try {
+			Thread.sleep(10);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-		return false;
+		 repaint();
 	}
 	
-	double getcached(int x) {
-		if(cachedLocation[0] == x) {
-			return cached[0];
+	public static double[] getminandmax(double x) {
+		double toreturn[] = {0, 500};
+		if(x % 23 == 0) {
+			toreturn[0] = 500;
+			toreturn[1] = 700;
 		}
-		else if(cachedLocation[1] == x) {
-			return cached[1];
-		}
-		return 0;
+		return toreturn;
 	}
 
-    public double getNoiseAt(double x, locationdetails base) {
-        double output = 0;
-        double scaledx = x*scalex;
-        int currentx = (int)Math.floor(scaledx);
-        int targetx = (int)Math.ceil(scaledx);
-        if(!(currentx == cachedLocation[0] && targetx == cachedLocation[1] && isCacheOcupied)) {	
-        	double currentbase[] = base.getrange(currentx);
-        	double targetbase[] = base.getrange(targetx);
-        	cached[0] = doescachecontain(currentx) ? getcached(currentx) : (getRandomNumber((int)currentx) * (currentbase[1] - currentbase[0])) + currentbase[0];
-        	cached[1] = doescachecontain(targetx) ? getcached(targetx) : (getRandomNumber((int)targetx) * (targetbase[1] - targetbase[0]) ) + targetbase[0];
-        	cachedLocation[0] = currentx;
-			cachedLocation[1] = targetx;
-        	isCacheOcupied = true;
-        }
-		output = smooth(scaledx - currentx, cached[0], cached[1]);
-        return output;
-    }
+	
+	public static void main(String[] args){
+		Noise game = new Noise();
+	   	frame.add(game);
+	   	frame.setSize(frameWidth, frameHeight);
+	   	new Keylistener();
+	   	frame.setVisible(true);
+	   	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	   	//noise.getRandomNumber(31);
+	   	//noise.getNoiseAt((-5), (double x) -> getminandmax(x));
+	   	//print((int)Math.round(noise.getNoiseAt((-5), (double x) -> getminandmax(x))));
+	   	for(int i = 0; i < 101; i++) {
+	   		//noise.getRandomNumber(i);
+		   	
+	   		//print(" ");
+	   	}
+	}
+}
+
+
+
+class Keylistener {
+	public static int placement = 0;
+	public static int speed = 50;
+	
+	public Keylistener() {
+		Noise.frame.addKeyListener(new KeyAdapter() {
+	    	public void keyPressed(KeyEvent e) {
+	    		int keyCode = e.getKeyCode();
+	    		if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A) {
+	    			placement -= speed;
+	    		}
+	    		if (keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D) {
+	    			placement += speed;
+	    		}
+	    	}
+	    	public void keyReleased(KeyEvent e) {
+	    		int keyCode = e.getKeyCode();
+	    		if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A) {
+	    			placement--;
+	    		}
+	    		if (keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D) {
+	    			placement++;
+	    		}
+	    	}
+	  	});
+	}
 }
