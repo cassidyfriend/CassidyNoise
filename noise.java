@@ -1,4 +1,4 @@
-//package cassidynoise;
+package cassidynoise;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -22,7 +22,7 @@ public class Noise extends JPanel {
 	int divider[] = {1, 70, 240, 30, 10};
 	static int ix = 0;
 	static int currentseed = 0;
-	static cassidynoise noise = new cassidynoise(32, 0.1);
+	static cassidynoise noise = new cassidynoise(54646, 0.005);
 	static void print(Object o) {
 		System.out.println(o);
 	}
@@ -32,14 +32,15 @@ public class Noise extends JPanel {
 		 g.setColor(Color.black);
 		 int i = 0;
 		 for(i = 0; i < frameWidth; i++) {
-			 g.fillRect(i, (int)noise.getNoiseAt(i+Keylistener.placement, (double x) -> getminandmax(x)), 1, 1);
+			 int current = (int)Math.round(noise.getNoiseAt((i+Keylistener.placement), (double x) -> getminandmax(x)));
+			 //print(current);
+			 g.fillRect(i, current, 3, 3);
 		 }
 		 frameWidth = frame.getWidth();
 		 frameHeight = frame.getHeight();
 		 try {
 			Thread.sleep(10);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		 repaint();
@@ -58,9 +59,12 @@ public class Noise extends JPanel {
 	   	new Keylistener();
 	   	frame.setVisible(true);
 	   	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	   	for(int i = 0; i < 100; i++) {
-	   		noise.getRandomNumber(i);
-		   	//print(noise.getRandomNumber(i));
+	   	//noise.getRandomNumber(31);
+	   	//print(noise.createcurve(0.25));
+	   	for(int i = 0; i < 101; i++) {
+	   		//noise.getRandomNumber(i);
+		   	
+	   		//print(" ");
 	   	}
 	}
 }
@@ -68,17 +72,6 @@ public class Noise extends JPanel {
 class cassidynoise {
     long seed;
     double scalex;
-    static int rangeArray[] = {
-			1,
-			10,
-			100,
-			1000,
-			10000,
-			100000,
-			1000000,
-			10000000,
-			100000000
-			};
     
     //public record distance(double min, double max) {}
     
@@ -95,31 +88,43 @@ class cassidynoise {
 			  this.scalex = scale;
     }
 	
-    public static long middleSquareNumber(long seed, int digits) {
+    long hashSeed(long x) {
+        x = (x ^ (x >>> 21)) * 0x45d9f3b;
+        x = (x ^ (x >>> 15)) * 0x3335b369;
+        return Math.abs(x);
+    }
+    
+    double roundtonearest(double base, double amount) {
+    	int start = (int)Math.round(base / amount);
+		return start * amount;
+	}
+    
+    double smooth(double x, double startheight, double targetheight) {
+        double start = 6.0 * Math.pow(x, 5);
+        double middle = 15.0 * Math.pow(x, 4);
+        double end = 10.0 * Math.pow(x, 3);
+        return (start - middle + end) * (targetheight - startheight) + startheight;
+    }
+
+    long middleSquareNumber(long seed, int digits) {
+		seed = hashSeed(seed);
+        if (digits <= 0) throw new IllegalArgumentException("Digits must be positive.");
         long square = seed * seed;
-        int numDigits = String.valueOf(square).length();
-
-        // Add leading zeros if necessary
         String squareStr = String.format("%0" + (2 * digits) + "d", square);
-
-        // Extract middle digits
-        int start = (numDigits - digits) / 2;
-        start = start < 0 ? 0 : start;
-        int end = start + digits;
-        return Integer.parseInt(squareStr.substring(start, end));
+        int start = (squareStr.length() - digits) / 2;
+        return Long.parseLong(squareStr.substring(start, start + digits));
     }
 	
 	double getRandomNumber(int input) {
         final long multiplier = 1664525L;
         final long increment = 1013904223L;
         final long modulus = (1L << 32);
-        long seed = Math.abs(middleSquareNumber(this.seed, 1));
-        for(int i = 0; i < seed; i++) {
-        	input = (int)middleSquareNumber(input, 3);
-        	//print(input);
+        long foramount = Math.abs(middleSquareNumber(input, 3));
+        long targetseed = seed;
+        for(int i = 0; i < foramount % 150; i++) {
+			targetseed = hashSeed(targetseed);
         }
-        seed = Math.abs(middleSquareNumber(input, 3));
-        long randomValue = (multiplier * seed + increment) % modulus;
+        long randomValue = (multiplier * targetseed + increment) % modulus;
         randomValue ^= (randomValue >>> 16);
         randomValue ^= (randomValue << 5);
         randomValue = randomValue & 0x7FFFFFFF;
@@ -128,13 +133,22 @@ class cassidynoise {
 
     public double getNoiseAt(double x, locationdetails base) {
               double output = 0;
-              x = x*scalex;
-              int minx = (int)Math.floor(x), maxx = (int)Math.ceil(x);
-              minx = (int)Math.floor(getRandomNumber(minx + (int)seed) * (base.getrange(x)[1] - base.getrange(x)[0]));
-              maxx = (int)Math.ceil(getRandomNumber(maxx + (int)seed) * (base.getrange(x)[1] - base.getrange(x)[0]));
-              return maxx;
+              double scaledx = x*scalex;
+              int currentx = (int)Math.floor(scaledx);
+              int targetx = (int)Math.ceil(scaledx);
+              int currentxheight = (int)Math.floor((getRandomNumber((int)currentx) * (base.getrange(currentx)[1] - base.getrange(currentx)[0]) ) + base.getrange(currentx)[0]);
+			  int targetxheight = (int)Math.floor((getRandomNumber((int)targetx) * (base.getrange(targetx)[1] - base.getrange(targetx)[0]) ) + base.getrange(targetx)[0]);
+			  
+			  
+			  
+			  
+			  //print(targetxheight + " " + currentxheight);
+			  output = smooth(scaledx - currentx, currentxheight, targetxheight);
+
+              return output;
     }
     //t for target, s for start. equation: y=((6x^5-15x^4+10x^3)*(t-s))+s
+    //output = (Math.pow(6 * x, 5) - Math.pow(15 * x, 4) + Math.pow(10 * x, 3) * (targetx - currentx)) + currentx;
 }
 
 
@@ -143,7 +157,6 @@ class Keylistener {
 	public static int placement = 0;
 	public static int speed = 50;
 	
-	@SuppressWarnings("static-access")
 	public Keylistener() {
 		Noise.frame.addKeyListener(new KeyAdapter() {
 	    	public void keyPressed(KeyEvent e) {
