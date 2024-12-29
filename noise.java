@@ -18,14 +18,7 @@ import javax.swing.JPanel;
 public class Noise extends JPanel {
 	static JFrame frame = new JFrame("game");
 	static int frameWidth = 1200, frameHeight = 750;
-	double scales[] = {0.0001, 0.0005, 0.001, 0.01, 0.03};
-	int divider[] = {1, 70, 240, 30, 10};
-	static int ix = 0;
-	static int currentseed = 0;
 	static cassidynoise noise = new cassidynoise(45327, 0.01);
-	static void print(Object o) {
-		System.out.println(o);
-	}
 	public void paint(Graphics g) {
 		 g.setColor(Color.white);
 		 g.fillRect(0, 0, frameWidth, frameHeight);
@@ -33,7 +26,6 @@ public class Noise extends JPanel {
 		 int i = 0;
 		 for(i = 0; i < frameWidth; i++) {
 			 int current = (int)Math.round(noise.getNoiseAt((i+Keylistener.placement), (double x) -> getminandmax(x)));
-			 //print(current);
 			 g.fillRect(i, current, 3, 3);
 		 }
 		 frameWidth = frame.getWidth();
@@ -47,7 +39,7 @@ public class Noise extends JPanel {
 	}
 	
 	public static double[] getminandmax(double x) {
-		double toreturn[] = {0, 500};
+		double toreturn[] = {0, 500, 1.0};
 		if(x % 23 == 0) {
 			toreturn[0] = 500;
 			toreturn[1] = 700;
@@ -63,14 +55,6 @@ public class Noise extends JPanel {
 	   	new Keylistener();
 	   	frame.setVisible(true);
 	   	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-	   	//noise.getRandomNumber(31);
-	   	//noise.getNoiseAt((-5), (double x) -> getminandmax(x));
-	   	//print((int)Math.round(noise.getNoiseAt((-5), (double x) -> getminandmax(x))));
-	   	for(int i = 0; i < 101; i++) {
-	   		//noise.getRandomNumber(i);
-		   	
-	   		//print(" ");
-	   	}
 	}
 }
 
