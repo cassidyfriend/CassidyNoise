@@ -1,5 +1,23 @@
 package cassidynoise;
 
+/**
+ * @author Cassidy Friend
+ * @version 1.0
+ * 
+ * <p> This is a noise method that is purpose built for 1D terrain generation, 2D will be coming soon. 
+ * <p> The noise has a built in cache system.
+ * <p> When using this method it is recommended to hash the x @hashSeed, this is the hashing method that is built in but it could be different.
+ * <p> Pseudo-random numbers are used to create the terrain using the middle square method, this is built in but most programming languages
+ * have this built in as a random number generator library and other methods can be used as well.
+ * <p> The function (x-start)/(target-start) is used to offset slopes. To create the smooth terrain the smoothing function is used: 6x^5 - 15x^4 + 10x^3.
+ * To create different heighten slopes the smoothing function is multiplied by the adjustment function: (max - min) + min. this can be found in the @smooth method.
+ * <p> The @createUnitInterval method is to create numbers from 0 to 1 from a long.
+ * <p> Finally the @getNoiseAt method is used to get the height of the terrain at any x value. It scales the x input by the @scalex and floors it.
+ * Next it checks if the cache is occupied by the @doesCacheContain method and if it is occupied by the current x
+ * it gets the height from the @getCached method and the offset from the @getCachedOffset. If not then it creates the height with the @getRandomNumber method and
+ * applies the minimum and maximum height using (max - min) + min and caches it. Finally the smooth function is used to smooth the height from the cache and
+ * the output is returned.
+ */
 public class cassidynoise {
     long seed;
     double scalex;
@@ -10,7 +28,11 @@ public class cassidynoise {
     public interface locationdetails{
     	public double[] getrange(double x);
     }
-    
+    /**
+     * 
+     * @param seed The starting number for creating pseudo-random numbers for the heights of the terrain.
+     * @param scale The scale of the terrain.
+     */
     public cassidynoise(long seed, double scale) {
               this.seed = seed;
 			  this.scalex = scale;
@@ -38,6 +60,17 @@ public class cassidynoise {
         int start = (squareStr.length() - digits) / 2;
         return Long.parseLong(squareStr.substring(start, start + digits));
     }
+    
+    double createUnitInterval(long input) {
+    	final long multiplier = 1664525L;
+        final long increment = 1013904223L;
+        final long modulus = 4294967296L;
+        long randomValue = (multiplier * input + increment) % modulus;
+        randomValue ^= (randomValue >>> 16);
+        randomValue ^= (randomValue << 5);
+        randomValue = randomValue & 0x7FFFFFFF;
+        return randomValue / (double) 0x7FFFFFFF;
+	}
 	
 	double[] getRandomNumber(int input, double scalefactor) {
         long targetseed = seed;
@@ -45,28 +78,17 @@ public class cassidynoise {
         for(int i = 0; i < Math.abs(middleSquareNumber(input, 3)) % scaled; i++) {
 			targetseed = hashSeed(targetseed);
         }
-        final long multiplier = 1664525L;
-        final long increment = 1013904223L;
-        final long modulus = (1L << 32);
-        long randomValue = (multiplier * targetseed + increment) % modulus;
-        randomValue ^= (randomValue >>> 16);
-        randomValue ^= (randomValue << 5);
-        randomValue = randomValue & 0x7FFFFFFF;
-        long randomoffset = (multiplier * Math.abs(middleSquareNumber(targetseed, 3)) + increment) % modulus;
-		randomoffset ^= (randomoffset >>> 16);
-		randomoffset ^= (randomoffset << 5);
-		randomoffset = randomoffset & 0x7FFFFFFF;
-        return new double[] {randomValue / (double) 0x7FFFFFFF, randomoffset / (double) 0x7FFFFFFF};
+        return new double[] {createUnitInterval(targetseed), createUnitInterval(Math.abs(middleSquareNumber(targetseed, 3)))};
     }
 	
-	boolean doescachecontain(int x) {
+	boolean doesCacheContain(int x) {
 		if((cachedLocation[0] == x || cachedLocation[1] == x) && isCacheOcupied) {
 			return true;
 		}
 		return false;
 	}
 	
-	double getcached(int x) {
+	double getCached(int x) {
 		if(cachedLocation[0] == x) {
 			return cached[0];
 		}
@@ -76,7 +98,7 @@ public class cassidynoise {
 		return 0;
 	}
 	
-	double getcachedoffset(int x) {
+	double getCachedOffset(int x) {
 		if(cachedLocation[0] == x) {
 			return offsetcached[0];
 		}
@@ -85,14 +107,23 @@ public class cassidynoise {
 		}
 		return 0;
 	}
-
+	/**
+	 * 
+	 * @param x The location to get the height of.
+	 * @param base This is the effector for the terrain.
+	 * It is interchangeable on the go 3 numbers,
+	 * The first two should be in order of minimum to maximum height.
+	 * The third should be the maximum allowed offset for the rounded whole number to change the peak location of the current slope.
+	 * WARNING: The number should be between 0 and 1 to prevent tearing and to keep the terrain smooth.
+	 * @return A double that is the height of the terrain at the location of x.
+	 */
     public double getNoiseAt(double x, locationdetails base) {
         double scaledx = x*scalex;
         int currentx = (int)Math.floor(scaledx);
         double currentrange[] = base.getrange(currentx);
-        if(isCacheOcupied && doescachecontain(currentx)) {
-        	cached[0] = getcached(currentx);
-			offsetcached[0] = getcachedoffset(currentx);
+        if(isCacheOcupied && doesCacheContain(currentx)) {
+        	cached[0] = getCached(currentx);
+			offsetcached[0] = getCachedOffset(currentx);
 			cachedLocation[0] = currentx;
         }
         else {
@@ -104,9 +135,9 @@ public class cassidynoise {
         }
         if(offsetcached[0] + currentx < scaledx) {
         	int targetx = (int)Math.ceil(scaledx);
-        	if(isCacheOcupied && doescachecontain(targetx)) {
-        		cached[1] = getcached(targetx);
-    			offsetcached[1] = getcachedoffset(targetx);
+        	if(isCacheOcupied && doesCacheContain(targetx)) {
+        		cached[1] = getCached(targetx);
+    			offsetcached[1] = getCachedOffset(targetx);
     			cachedLocation[1] = targetx;
         	}
         	else {
@@ -115,15 +146,14 @@ public class cassidynoise {
 	        	cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
 	        	offsetcached[1] = (target[1] * targetrange[2]);
 	        	cachedLocation[1] = targetx;
-	        	isCacheOcupied = true;
         	}
         	return smooth(scaledx - (currentx), cached[0], cached[1], offsetcached[0], offsetcached[1] + 1);
         }
         else {
         	int targetx = (int)Math.floor(scaledx) - 1;
-        	if(isCacheOcupied && doescachecontain(targetx)) {
-        		cached[1] = getcached(targetx);
-    			offsetcached[1] = getcachedoffset(targetx);
+        	if(isCacheOcupied && doesCacheContain(targetx)) {
+        		cached[1] = getCached(targetx);
+    			offsetcached[1] = getCachedOffset(targetx);
     			cachedLocation[1] = targetx;
         	}
         	else {
@@ -132,7 +162,6 @@ public class cassidynoise {
         		cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
 				offsetcached[1] = (target[1] * targetrange[2]);
         		cachedLocation[1] = targetx;
-        		isCacheOcupied = true;
         	}
         	return smooth(scaledx - (currentx), cached[1], cached[0], offsetcached[1] - 1, offsetcached[0]);
         }
