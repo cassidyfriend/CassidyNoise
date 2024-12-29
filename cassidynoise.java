@@ -11,10 +11,6 @@ public class cassidynoise {
     	public double[] getrange(double x);
     }
     
-    void print(Object o) {
-		System.out.println(o);
-	}
-    
     public cassidynoise(long seed, double scale) {
               this.seed = seed;
 			  this.scalex = scale;
@@ -46,7 +42,6 @@ public class cassidynoise {
 	double[] getRandomNumber(int input, double scalefactor) {
         long targetseed = seed;
         int scaled = (int)(Math.sqrt(scalefactor) * 4.0);
-        //print(scaled);
         for(int i = 0; i < Math.abs(middleSquareNumber(input, 3)) % scaled; i++) {
 			targetseed = hashSeed(targetseed);
         }
@@ -61,7 +56,6 @@ public class cassidynoise {
 		randomoffset ^= (randomoffset >>> 16);
 		randomoffset ^= (randomoffset << 5);
 		randomoffset = randomoffset & 0x7FFFFFFF;
-        //Math.abs(middleSquareNumber(targetseed, 3))
         return new double[] {randomValue / (double) 0x7FFFFFFF, randomoffset / (double) 0x7FFFFFFF};
     }
 	
@@ -95,10 +89,7 @@ public class cassidynoise {
     public double getNoiseAt(double x, locationdetails base) {
         double scaledx = x*scalex;
         int currentx = (int)Math.floor(scaledx);
-        //int targetx = (int)Math.ceil(x);
         double currentrange[] = base.getrange(currentx);
-        double output = 0;
-        //cached[0] = cachedLocation[0] == currentx && isCacheOcupied ? cached[0] : getRandomNumber(currentx, currentrange[1] - currentrange[0])[0]*100;
         if(isCacheOcupied && doescachecontain(currentx)) {
         	cached[0] = getcached(currentx);
 			offsetcached[0] = getcachedoffset(currentx);
@@ -112,71 +103,38 @@ public class cassidynoise {
         	isCacheOcupied = true;
         }
         if(offsetcached[0] + currentx < scaledx) {
-        	//print("scale catched");
-        	//print(scaledx);
-			//print(offsetcached[0] + currentx);
-			//print(scaledx);
         	int targetx = (int)Math.ceil(scaledx);
-            double targetrange[] = base.getrange(targetx);
-        	double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
-        	cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
-			offsetcached[1] = (target[1] * targetrange[2]);
-			//print(offsetcached[1]);
-        	cachedLocation[1] = targetx;
-        	isCacheOcupied = true;
-        	output = smooth(scaledx - (currentx), cached[0], cached[1], offsetcached[0], offsetcached[1] + 1);
-        }
-        else {
-        	//print(scaledx);
-			//print(offsetcached[0] + currentx);
-			//print(scaledx);
-        	int targetx = (int)Math.floor(scaledx) - 1;
-            double targetrange[] = base.getrange(targetx);
-        	double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
-        	cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
-			offsetcached[1] = (target[1] * targetrange[2]);
-			//print(offsetcached[1]);
-        	cachedLocation[1] = targetx;
-        	isCacheOcupied = true;
-        	output = smooth(scaledx - (currentx), cached[1], cached[0], offsetcached[1] - 1, offsetcached[0]);
-        }
-        return output;
-    }
-    /*
-     * public double getNoiseAt(double x, locationdetails base) {
-        double scaledx = x*scalex;
-        int currentx = (int)Math.floor(scaledx);
-        int targetx = (int)Math.ceil(scaledx);
-        if(!(currentx == cachedLocation[0] && targetx == cachedLocation[1] && isCacheOcupied)) {	
-        	double currentbase[] = base.getrange(currentx);
-        	double targetbase[] = base.getrange(targetx);
-        	//print(doescachecontain(currentx));
-        	if(!doescachecontain(currentx) && isCacheOcupied) {
-				double current[] = getRandomNumber(currentx);
-				cached[0] = (current[0] * (currentbase[1] - currentbase[0]) ) + currentbase[0];
-				offsetcached[0] = current[1] * currentbase[2];
+        	if(isCacheOcupied && doescachecontain(targetx)) {
+        		cached[1] = getcached(targetx);
+    			offsetcached[1] = getcachedoffset(targetx);
+    			cachedLocation[1] = targetx;
         	}
         	else {
-        		cached[0] = getcached(currentx);
-				offsetcached[0] = getcachedoffset(currentx);
+	        	double targetrange[] = base.getrange(targetx);
+	        	double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
+	        	cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
+	        	offsetcached[1] = (target[1] * targetrange[2]);
+	        	cachedLocation[1] = targetx;
+	        	isCacheOcupied = true;
         	}
-        	if(!doescachecontain(targetx) && isCacheOcupied) {
-				double target[] = getRandomNumber(targetx);
-				cached[1] = (target[0] * (targetbase[1] - targetbase[0]) ) + targetbase[0];
-				offsetcached[1] = target[1] * targetbase[2];
-				//print(offsetcached[1]);
-        	}
-			else {
-				cached[1] = getcached(targetx);
-				offsetcached[1] = getcachedoffset(targetx);
-			}
-        	//cached[0] = doescachecontain(currentx) ? getcached(currentx) : (getRandomNumber((int)currentx) * (currentbase[1] - currentbase[0])) + currentbase[0];
-        	//cached[1] = doescachecontain(targetx) ? getcached(targetx) : (getRandomNumber((int)targetx) * (targetbase[1] - targetbase[0]) ) + targetbase[0];
-        	cachedLocation[0] = currentx;
-			cachedLocation[1] = targetx;
-        	isCacheOcupied = true;
+        	return smooth(scaledx - (currentx), cached[0], cached[1], offsetcached[0], offsetcached[1] + 1);
         }
-        return smooth(scaledx - (currentx), cached[0], cached[1], offsetcached[0], offsetcached[1] + 1);
+        else {
+        	int targetx = (int)Math.floor(scaledx) - 1;
+        	if(isCacheOcupied && doescachecontain(targetx)) {
+        		cached[1] = getcached(targetx);
+    			offsetcached[1] = getcachedoffset(targetx);
+    			cachedLocation[1] = targetx;
+        	}
+        	else {
+        		double targetrange[] = base.getrange(targetx);
+        		double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
+        		cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
+				offsetcached[1] = (target[1] * targetrange[2]);
+        		cachedLocation[1] = targetx;
+        		isCacheOcupied = true;
+        	}
+        	return smooth(scaledx - (currentx), cached[1], cached[0], offsetcached[1] - 1, offsetcached[0]);
+        }
     }
-     */
 }
