@@ -8,15 +8,15 @@ package cassidynoise;
  * <p> The noise has a built in cache system.
  * <p> When using this method it is recommended to hash the x @hashSeed, this is the hashing method that is built in but it could be different.
  * <p> Pseudo-random numbers are used to create the terrain using the middle square method, this is built in but most programming languages
- * have this built in as a random number generator library and other methods can be used as well.
+ * as a random number generator library and other methods can be used as well.
  * <p> The function (x-start)/(target-start) is used to offset slopes. To create the smooth terrain the smoothing function is used: 6x^5 - 15x^4 + 10x^3.
  * To create different heighten slopes the smoothing function is multiplied by the adjustment function: (max - min) + min. this can be found in the @smooth method.
  * <p> The @createUnitInterval method is to create numbers from 0 to 1 from a long.
  * <p> Finally the @getNoiseAt method is used to get the height of the terrain at any x value. It scales the x input by the @scalex and floors it.
- * Next it checks if the cache is occupied by the @doesCacheContain method and if it is occupied by the current x
- * it gets the height from the @getCached method and the offset from the @getCachedOffset. If not then it creates the height with the @getRandomNumber method and
- * applies the minimum and maximum height using (max - min) + min and caches it. Finally the smooth function is used to smooth the height from the cache and
- * the output is returned.
+ * Next it checks if the cache is occupied by the @doesCacheContain method and if it is occupied by the current x.
+ * It gets the height from the @getCached method and the offset from the @getCachedOffset. If not then it creates the height with the @getRandomNumber method and
+ * applies the minimum and maximum height using (max - min) + min and caches it using the @writeToCache. Finally the smooth function is used to smooth the height
+ * from the cache and the output is returned.
  */
 public class cassidynoise {
     long seed;
@@ -107,6 +107,12 @@ public class cassidynoise {
 		}
 		return 0;
 	}
+	void writeToCache(int cacheLocation, double cachedHeight, int Location, double offset) {
+		cached[cacheLocation] = cachedHeight;
+		offsetcached[cacheLocation] = offset;
+		cachedLocation[cacheLocation] = Location;
+		isCacheOcupied = true;
+	}
 	/**
 	 * 
 	 * @param x The location to get the height of.
@@ -122,46 +128,33 @@ public class cassidynoise {
         int currentx = (int)Math.floor(scaledx);
         double currentrange[] = base.getrange(currentx);
         if(isCacheOcupied && doesCacheContain(currentx)) {
-        	cached[0] = getCached(currentx);
-			offsetcached[0] = getCachedOffset(currentx);
-			cachedLocation[0] = currentx;
+        	writeToCache(0, getCached(currentx), currentx, getCachedOffset(currentx));
         }
         else {
         	double current[] = getRandomNumber(currentx, currentrange[1] - currentrange[0]);
-        	cached[0] = (current[0] * (currentrange[1] - currentrange[0]) ) + currentrange[0];
-			offsetcached[0] = (current[1] * currentrange[2]);
-        	cachedLocation[0] = currentx;
-        	isCacheOcupied = true;
+        	writeToCache(0, (current[0] * (currentrange[1] - currentrange[0]) ) + currentrange[0], currentx, current[1]);
         }
         if(offsetcached[0] + currentx < scaledx) {
         	int targetx = (int)Math.ceil(scaledx);
         	if(isCacheOcupied && doesCacheContain(targetx)) {
-        		cached[1] = getCached(targetx);
-    			offsetcached[1] = getCachedOffset(targetx);
-    			cachedLocation[1] = targetx;
+        		writeToCache(1, getCached(targetx), targetx, getCachedOffset(targetx));
         	}
         	else {
 	        	double targetrange[] = base.getrange(targetx);
 	        	double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
-	        	cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
-	        	offsetcached[1] = (target[1] * targetrange[2]);
-	        	cachedLocation[1] = targetx;
+	        	writeToCache(1, (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0], targetx, target[1]);
         	}
         	return smooth(scaledx - (currentx), cached[0], cached[1], offsetcached[0], offsetcached[1] + 1);
         }
         else {
         	int targetx = (int)Math.floor(scaledx) - 1;
         	if(isCacheOcupied && doesCacheContain(targetx)) {
-        		cached[1] = getCached(targetx);
-    			offsetcached[1] = getCachedOffset(targetx);
-    			cachedLocation[1] = targetx;
+        		writeToCache(1, getCached(targetx), targetx, getCachedOffset(targetx));
         	}
         	else {
         		double targetrange[] = base.getrange(targetx);
         		double target[] = getRandomNumber(targetx, targetrange[1] - targetrange[0]);
-        		cached[1] = (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0];
-				offsetcached[1] = (target[1] * targetrange[2]);
-        		cachedLocation[1] = targetx;
+				writeToCache(1, (target[0] * (targetrange[1] - targetrange[0]) ) + targetrange[0], targetx, target[1]);
         	}
         	return smooth(scaledx - (currentx), cached[1], cached[0], offsetcached[1] - 1, offsetcached[0]);
         }
